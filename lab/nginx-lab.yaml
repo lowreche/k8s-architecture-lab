@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:latest  # <--- O erro estava aqui ou na indentação abaixo
+        image: nginx:latest
         ports:
         - containerPort: 80
 ---
