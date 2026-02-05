@@ -81,6 +81,30 @@ kubectl get pods -w
 kubectl scale deployment nginx-deployment --replicas=10
 kubectl get pods
 
+# 📈 Passo 5: Elasticidade com HPA (Horizontal Pod Autoscaler)
+Nesta etapa, demonstramos como o Kubernetes escala a aplicação automaticamente com base no consumo de CPU, otimizando performance e custos (FinOps).
+
+1. Configurar limites de recursos (Necessário para o cálculo do HPA)
+Bash
+
+kubectl patch deployment nginx-deployment -p '{"spec":{"template":{"spec":{"containers":[{"name":"nginx","resources":{"requests":{"cpu":"100m"}}}]}}}}'
+2. Criar a regra de Autoscaling (Mínimo 3, Máximo 10 réplicas)
+Bash
+
+kubectl autoscale deployment nginx-deployment --cpu="50%" --min=3 --max=10
+3. Monitorar o escalonamento em tempo real
+Bash
+
+kubectl get hpa -w
+🚀 Simulação de Carga (Stress Test)
+Para ver o HPA em ação e as réplicas subindo, abra um novo terminal e execute:
+
+Bash
+
+kubectl run -i --tty load-generator --rm --image=busybox:1.28 --restart=Never -- /bin/sh -c "while true; do wget -q -O- http://nginx-service; done"
+❓ Dica do Professor:
+Observe que o Kubernetes leva cerca de 1 a 2 minutos para coletar as métricas iniciais (status <unknown>). Após o teste de carga, o HPA levará alguns minutos para fazer o Scale Down (reduzir para 3 pods), garantindo que a aplicação esteja estável antes de remover recursos.
+
 # ❓ FAQ de Troubleshooting:
 Erro 403 Forbidden no navegador? Você provavelmente acessou o IP do API Server (Porta 443) em vez do LoadBalancer (Porta 80). Verifique o kubectl get svc.
 
