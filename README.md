@@ -13,13 +13,17 @@ Abra o AWS CloudShell no console da AWS. Primeiro, vamos instalar as ferramentas
 
 Instalar o eksctl
 
+```bash
 curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
 sudo mv /tmp/eksctl /usr/local/bin
-Clonar o repositório do laboratório
-Bash
+```
 
+Clonar o repositório do laboratório
+
+```bash
 git clone https://github.com/lowreche/k8s-architecture-lab.git
 cd k8s-architecture-lab
+```
 
 # 2. Provisionamento do Cluster (Ajuste para AWS Academy)
 Devido às restrições de permissão do IAM no Academy, utilizaremos um arquivo de configuração para reaproveitar a LabRole existente.
@@ -28,6 +32,7 @@ Crie o arquivo cluster.yaml:
 
 YAML: (Substitua o número da conta abaixo pelo numero da sua conta do AWS Academy)
 
+```bash
 cat <<EOF > cluster.yaml
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
@@ -46,59 +51,82 @@ managedNodeGroups:
     iam:
       instanceRoleARN: "arn:aws:iam::924877704926:role/LabRole"
 EOF
+```
 
 # Execute a criação:
 
+```bash
 eksctl create cluster -f cluster.yaml
+```
 
 # 3. Deploy da Aplicação e Ajuste de Rede
+
 Após o cluster estar no status READY, vamos aplicar nosso manifesto do Nginx e liberar o acesso externo.
 
 Aplicar Manifesto:
 
+```bash
 kubectl apply -f lab/nginx-lab.yaml
+```
+Liberar porta 80 no Security Group dos Nodes:
 
-Liberar porta 80 no Security Group dos Nodes
-
+```bash
 SG_ID=$(aws ec2 describe-instances --filters "Name=tag:eks:nodegroup-name,Values=standard-nodes" --query "Reservations[0].Instances[0].SecurityGroups[0].GroupId" --output text)
 aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 80 --cidr 0.0.0.0/0
-
+```
 # 🧪 Validando a Operação 🌐 Acesso Externo Para obter a URL pública da sua aplicação:
 
+```bash
 kubectl get svc nginx-service
 Copie o endereço em EXTERNAL-IP e cole no navegador (utilize http://).
+```
 
 🩹 Self-Healing (Resiliência) 
 
 Delete um Pod e veja o Kubernetes recriá-lo em segundos para manter o estado desejado:
 
+```bash
 kubectl get pods
 kubectl delete pod [NOME_DO_POD]
 kubectl get pods -w
+```
 
 📈 Escala Horizontal Simule uma alta demanda escalando as réplicas:
 
+```bash
 kubectl scale deployment nginx-deployment --replicas=10
 kubectl get pods
+```
 
 # 📈 Passo 5: Elasticidade com HPA (Horizontal Pod Autoscaler)
+
 Nesta etapa, demonstramos como o Kubernetes escala a aplicação automaticamente com base no consumo de CPU, otimizando performance e custos (FinOps).
 
 1. Configurar limites de recursos (Necessário para o cálculo do HPA)
 
+```bash
 kubectl patch deployment nginx-deployment -p '{"spec":{"template":{"spec":{"containers":[{"name":"nginx","resources":{"requests":{"cpu":"100m"}}}]}}}}'
+```
+
 2. Criar a regra de Autoscaling (Mínimo 3, Máximo 10 réplicas)
 
+```bash
 kubectl autoscale deployment nginx-deployment --cpu="50%" --min=3 --max=10
+```
+
 3. Monitorar o escalonamento em tempo real
 
+```bash
 kubectl get hpa -w
+```
 
 🚀 Simulação de Carga (Stress Test)
+
 Para ver o HPA em ação e as réplicas subindo, abra um novo terminal e execute:
 
+```bash
 kubectl run -i --tty load-generator --rm --image=busybox:1.28 --restart=Never -- /bin/sh -c "while true; do wget -q -O- http://nginx-service; done"
-
+```
 ❓ Dica do Professor:
 Observe que o Kubernetes leva cerca de 1 a 2 minutos para coletar as métricas iniciais (status <unknown>). Após o teste de carga, o HPA levará alguns minutos para fazer o Scale Down (reduzir para 3 pods), garantindo que a aplicação esteja estável antes de remover recursos.
 
